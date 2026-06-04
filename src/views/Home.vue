@@ -87,7 +87,13 @@
               :name="cat.id"
             >
               <template #title>
-                <div class="flex items-center justify-between w-full" @click.stop="selectCategory(cat, null)">
+                <div class="flex items-center justify-between w-full" 
+                     @click.stop="selectCategory(cat, null)"
+                     @touchstart="handleTouchStart(cat, 'category')"
+                     @touchend="handleTouchEnd"
+                     @touchmove="handleTouchMove"
+                     @contextmenu.prevent="handleContextMenu(cat, 'category')"
+                >
                   <span :class="{ 'text-blue-600 font-bold': currentCategory && currentCategory.id === cat.id && !currentChapter }">
                     {{ cat.name }}
                   </span>
@@ -102,6 +108,10 @@
                   :title="chap.name" 
                   clickable 
                   @click="selectCategory(cat, chap)"
+                  @touchstart="handleTouchStart(chap, 'chapter', cat)"
+                  @touchend="handleTouchEnd"
+                  @touchmove="handleTouchMove"
+                  @contextmenu.prevent="handleContextMenu(chap, 'chapter', cat)"
                   :class="{ 'bg-blue-50': currentChapter && currentChapter.id === chap.id }"
                   title-class="text-gray-600 text-sm pl-4"
                 >
@@ -141,6 +151,32 @@
         </div>
       </div>
     </van-popup>
+
+    <!-- 动作面板 -->
+    <van-action-sheet
+      v-model:show="showActionSheet"
+      :actions="actionSheetActions"
+      cancel-text="取消"
+      close-on-click-action
+      @select="onActionSelect"
+    />
+
+    <!-- 重命名弹窗 -->
+    <van-dialog
+      v-model:show="showRenameDialog"
+      title="重命名"
+      show-cancel-button
+      @confirm="confirmRename"
+    >
+      <div class="p-4">
+        <van-field
+          v-model="renameValue"
+          placeholder="请输入新名称"
+          class="border rounded"
+          clearable
+        />
+      </div>
+    </van-dialog>
   </div>
 </template>
 
@@ -148,7 +184,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import localforage from 'localforage'
-import { showToast } from 'vant'
+import { showToast, showConfirmDialog } from 'vant'
 
 const router = useRouter()
 const questions = ref([])
@@ -159,6 +195,121 @@ const currentChapter = ref(null)
 const newCategoryName = ref('')
 const newChapterNames = ref({})
 const activeCollapse = ref('')
+
+// 长按相关状态
+const showActionSheet = ref(false)
+const actionSheetActions = [
+  { name: '重命名' },
+  { name: '删除', color: '#ee0a24' }
+]
+const currentLongPressItem = ref(null)
+const currentLongPressType = ref('')
+const currentLongPressParent = ref(null)
+
+// 重命名相关状态
+const showRenameDialog = ref(false)
+const renameValue = ref('')
+
+let pressTimer = null
+let isLongPress = false
+
+const handleTouchStart = (item, type, parent = null) => {
+  isLongPress = false
+  pressTimer = setTimeout(() => {
+    isLongPress = true
+    currentLongPressItem.value = item
+    currentLongPressType.value = type
+    currentLongPressParent.value = parent
+    showActionSheet.value = true
+  }, 800)
+}
+
+const handleTouchEnd = () => {
+  if (pressTimer) {
+    clearTimeout(pressTimer)
+    pressTimer = null
+  }
+}
+
+const handleTouchMove = () => {
+  if (pressTimer) {
+    clearTimeout(pressTimer)
+    pressTimer = null
+  }
+}
+
+const handleContextMenu = (item, type, parent = null) => {
+  currentLongPressItem.value = item
+  currentLongPressType.value = type
+  currentLongPressParent.value = parent
+  showActionSheet.value = true
+}
+
+const onActionSelect = (action) => {
+  if (action.name === '重命名') {
+    renameValue.value = currentLongPressItem.value.name
+    showRenameDialog.value = true
+  } else if (action.name === '删除') {
+    handleDelete()
+  }
+}
+
+const confirmRename = async () => {
+  const newName = renameValue.value.trim()
+  if (!newName) {
+    showToast('名称不能为空')
+    return
+  }
+  
+  if (currentLongPressType.value === 'category') {
+    if (categories.value.some(c => c.id !== currentLongPressItem.value.id && c.name === newName)) {
+      showToast('分类已存在')
+      return
+    }
+    currentLongPressItem.value.name = newName
+  } else {
+    const parent = currentLongPressParent.value
+    if (parent.chapters.some(c => c.id !== currentLongPressItem.value.id && c.name === newName)) {
+      showToast('章节已存在')
+      return
+    }
+    currentLongPressItem.value.name = newName
+  }
+  
+  await localforage.setItem('categories', JSON.parse(JSON.stringify(categories.value)))
+  showToast('重命名成功')
+}
+
+const handleDelete = () => {
+  const itemName = currentLongPressItem.value.name
+  const typeName = currentLongPressType.value === 'category' ? '科目' : '章节'
+  
+  showConfirmDialog({
+    title: '确认删除',
+    message: `确定要删除${typeName}【${itemName}】吗？该${typeName}下的所有错题将被一并删除！`,
+  }).then(async () => {
+    if (currentLongPressType.value === 'category') {
+      categories.value = categories.value.filter(c => c.id !== currentLongPressItem.value.id)
+      questions.value = questions.value.filter(q => q.categoryId !== currentLongPressItem.value.id)
+      
+      if (currentCategory.value && currentCategory.value.id === currentLongPressItem.value.id) {
+        selectCategory(null, null)
+      }
+    } else {
+      const parent = currentLongPressParent.value
+      parent.chapters = parent.chapters.filter(c => c.id !== currentLongPressItem.value.id)
+      questions.value = questions.value.filter(q => q.chapterId !== currentLongPressItem.value.id)
+      
+      if (currentChapter.value && currentChapter.value.id === currentLongPressItem.value.id) {
+        selectCategory(parent, null)
+      }
+    }
+    
+    await localforage.setItem('categories', JSON.parse(JSON.stringify(categories.value)))
+    await localforage.setItem('questions', JSON.parse(JSON.stringify(questions.value)))
+    showToast('删除成功')
+  }).catch(() => {})
+}
 
 const dueQuestionsCount = computed(() => {
   const now = Date.now()
@@ -271,6 +422,11 @@ const addChapter = async (cat) => {
 }
 
 const selectCategory = (cat, chap) => {
+  if (isLongPress) {
+    isLongPress = false
+    return
+  }
+  
   currentCategory.value = cat
   currentChapter.value = chap
   showSidebar.value = false
