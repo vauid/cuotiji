@@ -75,11 +75,20 @@
         </div>
       </van-form>
       
-      <div class="mt-8">
-        <van-button round block type="danger" plain @click="clearData">
-          清除所有数据
-        </van-button>
-      </div>
+      <van-cell-group inset title="数据管理" class="mt-8 !bg-transparent">
+        <div class="flex flex-col gap-3 px-4 py-2">
+          <van-button round block type="primary" plain @click="exportData">
+            导出数据
+          </van-button>
+          <van-button round block type="success" plain @click="triggerImport">
+            导入数据
+          </van-button>
+          <van-button round block type="danger" plain @click="clearData">
+            清除所有数据
+          </van-button>
+        </div>
+      </van-cell-group>
+      <input type="file" ref="fileInput" accept=".json" style="display: none" @change="onFileChange" />
     </div>
     
     <van-popup v-model:show="showModelPicker" position="bottom">
@@ -293,5 +302,73 @@ const clearData = () => {
   }).catch(() => {
     // on cancel
   })
+}
+
+const fileInput = ref(null)
+
+const exportData = async () => {
+  try {
+    const keys = await localforage.keys()
+    const data = {}
+    for (const key of keys) {
+      data[key] = await localforage.getItem(key)
+    }
+    
+    const dataStr = JSON.stringify(data)
+    const blob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    
+    const a = document.createElement('a')
+    a.href = url
+    const date = new Date()
+    const dateStr = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`
+    a.download = `cuotiji_backup_${dateStr}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    
+    showToast('导出成功')
+  } catch (error) {
+    console.error('Export error:', error)
+    showToast('导出失败')
+  }
+}
+
+const triggerImport = () => {
+  if (fileInput.value) {
+    fileInput.value.click()
+  }
+}
+
+const onFileChange = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result)
+      
+      showDialog({
+        title: '提示',
+        message: '导入数据将覆盖同名记录，是否继续？',
+        showCancelButton: true,
+      }).then(async () => {
+        for (const key in data) {
+          await localforage.setItem(key, data[key])
+        }
+        showToast('导入成功')
+        event.target.value = ''
+      }).catch(() => {
+        event.target.value = ''
+      })
+    } catch (error) {
+      console.error('Import error:', error)
+      showToast('导入失败，文件格式不正确')
+      event.target.value = ''
+    }
+  }
+  reader.readAsText(file)
 }
 </script>
