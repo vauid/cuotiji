@@ -103,6 +103,15 @@ body {
   --van-cell-background: transparent;
   --van-cell-text-color: var(--text-main);
   --van-collapse-item-content-background: transparent;
+  --van-toast-background: rgba(0, 0, 0, 0.8);
+  --van-toast-text-color: #ffffff;
+  --van-toast-loading-icon-color: #ffffff;
+  --van-dialog-background: transparent;
+  --van-dialog-has-title-message-text-color: var(--text-sub);
+  --van-dialog-message-text-color: var(--text-sub);
+  --van-dialog-title-text-color: var(--text-main);
+  --van-dialog-confirm-button-text-color: var(--text-main);
+  --van-dialog-cancel-button-text-color: var(--text-sub);
 }
 
 .van-nav-bar {
@@ -119,10 +128,10 @@ body {
   border-top: 1px solid var(--panel-border);
 }
 
-.van-popup {
+.van-popup:not(.van-toast) {
   background: var(--app-bg) !important;
 }
-.van-popup::before {
+.van-popup:not(.van-toast)::before {
   content: '';
   position: absolute;
   top: 0;
