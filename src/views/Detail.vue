@@ -43,8 +43,11 @@
 
       <!-- AI 助教聊天区 -->
       <div v-show="!practiceMode" class="glass-panel overflow-hidden mt-6">
-        <div class="p-3 font-bold flex items-center" style="background: rgba(0,0,0,0.05); color: var(--text-main); border-bottom: 1px solid var(--glass-border)">
-          <van-icon name="chat-o" class="mr-2" /> AI 助教答疑
+        <div class="p-3 font-bold flex items-center justify-between" style="background: rgba(0,0,0,0.05); color: var(--text-main); border-bottom: 1px solid var(--glass-border)">
+          <div class="flex items-center">
+            <van-icon name="chat-o" class="mr-2" /> AI 助教答疑
+          </div>
+          <van-button size="mini" plain @click="clearChatHistory" style="border-color: var(--text-sub); color: var(--text-sub)">清空记录</van-button>
         </div>
         
         <div class="p-4 h-64 overflow-y-auto" ref="chatContainer">
@@ -52,9 +55,12 @@
             对这道题还有疑问？直接问我吧！
           </div>
           
-          <div v-for="(msg, index) in chatHistory" :key="index" class="mb-4 flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
-            <div class="max-w-[80%] p-3 rounded-lg" :style="msg.role === 'user' ? 'background: var(--text-main); color: var(--app-bg); border-top-right-radius: 0' : 'background: rgba(255,255,255,0.5); color: var(--text-main); border-top-left-radius: 0; backdrop-filter: blur(4px)'">
-              {{ msg.content }}
+          <div v-for="(msg, index) in chatHistory" :key="index" class="mb-4">
+            <div v-if="msg.role === 'user'" class="text-right" style="color: var(--text-main)">
+              <span class="font-bold">问：</span>{{ msg.content }}
+            </div>
+            <div v-else class="text-left w-full" style="color: var(--text-main)">
+              <span class="font-bold">答：</span>{{ msg.content }}
             </div>
           </div>
           <div v-if="aiThinking" class="text-sm ml-2" style="color: var(--text-sub)">AI 思考中...</div>

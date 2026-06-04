@@ -161,7 +161,7 @@ import { showToast, showLoadingToast, closeToast, showDialog } from 'vant'
 const router = useRouter()
 const activeTab = ref(0)
 const fileList = ref([])
-const saveImage = ref(true)
+const saveImage = ref(false)
 const recognizing = ref(false)
 const saving = ref(false)
 const importText = ref('')
