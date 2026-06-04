@@ -364,16 +364,55 @@ const submitAnswer = async () => {
   if (isNewFillInTheBlank(q)) {
     // 新版填空题判题
     const standardAnswers = (q.answer || '').split('||').map(s => s.trim())
-    // 检查用户填写的每个空是否与标准答案匹配
+    
     let allMatch = true
+    let userAnswerIndex = 0
+    
     for (let i = 0; i < standardAnswers.length; i++) {
-      const ua = (userAnswers.value[i] || '').trim()
-      if (ua !== standardAnswers[i]) {
-        allMatch = false
-        break
+      const saPart = standardAnswers[i]
+      
+      // 检查是否是并列项
+      if (saPart.includes('&&')) {
+        const parallelAnswers = saPart.split('&&').map(s => s.trim())
+        const parallelCount = parallelAnswers.length
+        
+        // 获取用户对应的几个答案
+        const userParallelAnswers = []
+        for (let j = 0; j < parallelCount; j++) {
+          userParallelAnswers.push((userAnswers.value[userAnswerIndex + j] || '').trim())
+        }
+        
+        // 检查用户的答案集合是否与标准答案集合一致（无序比对）
+        const sortedSA = [...parallelAnswers].sort()
+        const sortedUA = [...userParallelAnswers].sort()
+        
+        let parallelMatch = true
+        for (let j = 0; j < parallelCount; j++) {
+          if (sortedSA[j] !== sortedUA[j]) {
+            parallelMatch = false
+            break
+          }
+        }
+        
+        if (!parallelMatch) {
+          allMatch = false
+          break
+        }
+        
+        userAnswerIndex += parallelCount
+      } else {
+        // 普通顺序项
+        const ua = (userAnswers.value[userAnswerIndex] || '').trim()
+        if (ua !== saPart) {
+          allMatch = false
+          break
+        }
+        userAnswerIndex++
       }
     }
-    correct = allMatch && standardAnswers.length > 0
+    
+    // 确保用户填写的答案数量与标准答案要求的总空数一致
+    correct = allMatch && standardAnswers.length > 0 && userAnswerIndex === userAnswers.value.length
   } else if (q.type === '单选题') {
     const ua = userChoice.value.trim().toUpperCase()
     const sa = (q.answer || '').trim().toUpperCase()

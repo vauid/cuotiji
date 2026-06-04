@@ -23,9 +23,14 @@
             <div class="py-4">
               <div class="flex justify-between items-center mb-4">
                 <span style="color: var(--text-main)">上传包含错题的图片</span>
-                <van-uploader v-model="fileList" :max-count="1" accept="image/*" :after-read="afterRead" @delete="onDeleteImage">
-                  <van-button icon="photograph" round size="small" :loading="recognizing" class="custom-btn">拍照 / 选图</van-button>
-                </van-uploader>
+                <div class="flex gap-2">
+                  <van-uploader v-model="fileList" :max-count="1" accept="image/*" capture="camera" :after-read="afterRead" @delete="onDeleteImage">
+                    <van-button icon="photograph" round size="small" :loading="recognizing" class="custom-btn">拍照</van-button>
+                  </van-uploader>
+                  <van-uploader v-model="fileList" :max-count="1" accept="image/*" :after-read="afterRead" @delete="onDeleteImage">
+                    <van-button icon="photo" round size="small" :loading="recognizing" class="custom-btn">选图</van-button>
+                  </van-uploader>
+                </div>
               </div>
               <div class="flex items-center justify-between text-sm mb-2">
                 <span style="color: var(--text-sub)">保存原图 (复习时可查看)</span>
@@ -310,7 +315,7 @@ const afterRead = async (file) => {
     "type": "题型（如：单选题、多选题、判断题、填空题、简答题、论述题、其他）",
     "content": "题干完整内容。注意：如果是填空题，请将需要填空的地方统一替换为三个下划线 ___",
     "options": "选项完整内容（仅选择题需要，其他题型留空）",
-    "answer": "正确答案。注意：如果是填空题，有多个空时，请严格使用双竖线 || 分隔每个空的答案（例如：答案1||答案2||答案3）",
+    "answer": "正确答案。注意：如果是填空题，有多个空时，请严格使用双竖线 || 分隔每个空的答案（例如：答案1||答案2||答案3）。如果其中有几个空是并列关系（顺序无关），请使用 && 连接这几个并列的答案（例如：并列答案1&&并列答案2||固定答案3）。",
     "analysis": "根据原题做出的解析（不要根据图片中的错误答案做解析）"
   }
 ]
