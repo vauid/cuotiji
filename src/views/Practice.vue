@@ -91,7 +91,7 @@
                   v-model="userAnswers[index]"
                   type="text"
                   class="border-b-2 outline-none px-1 mx-1 w-20 text-center bg-transparent"
-                  style="border-color: var(--text-main); color: var(--text-main)"
+                  :style="showResult ? (blankResults[index] ? 'border-color: #10b981; color: #10b981' : 'border-color: #ef4444; color: #ef4444') : 'border-color: var(--text-main); color: var(--text-main)'"
                   :disabled="showResult"
                 />
               </span>
@@ -228,6 +228,7 @@ const correctCount = ref(0)
 
 // 当前题目状态
 const userAnswers = ref([]) // 填空题答案数组
+const blankResults = ref([]) // 填空题每个空的判题结果
 const userChoice = ref('') // 单选/判断题答案
 const userMultiChoice = ref([]) // 多选题答案数组
 const showResult = ref(false)
@@ -332,6 +333,7 @@ const startPractice = () => {
 
 const resetCurrentState = () => {
   userAnswers.value = []
+  blankResults.value = []
   userChoice.value = ''
   userMultiChoice.value = []
   showResult.value = false
@@ -367,6 +369,7 @@ const submitAnswer = async () => {
     
     let allMatch = true
     let userAnswerIndex = 0
+    blankResults.value = []
     
     for (let i = 0; i < standardAnswers.length; i++) {
       const saPart = standardAnswers[i]
@@ -382,30 +385,34 @@ const submitAnswer = async () => {
           userParallelAnswers.push((userAnswers.value[userAnswerIndex + j] || '').trim())
         }
         
-        // 检查用户的答案集合是否与标准答案集合一致（无序比对）
-        const sortedSA = [...parallelAnswers].sort()
-        const sortedUA = [...userParallelAnswers].sort()
-        
+        let availableSA = [...parallelAnswers]
         let parallelMatch = true
+        
         for (let j = 0; j < parallelCount; j++) {
-          if (sortedSA[j] !== sortedUA[j]) {
+          const ua = userParallelAnswers[j]
+          const matchIndex = availableSA.indexOf(ua)
+          if (matchIndex !== -1) {
+            blankResults.value[userAnswerIndex + j] = true
+            availableSA.splice(matchIndex, 1)
+          } else {
+            blankResults.value[userAnswerIndex + j] = false
             parallelMatch = false
-            break
           }
         }
         
         if (!parallelMatch) {
           allMatch = false
-          break
         }
         
         userAnswerIndex += parallelCount
       } else {
         // 普通顺序项
         const ua = (userAnswers.value[userAnswerIndex] || '').trim()
-        if (ua !== saPart) {
+        if (ua === saPart) {
+          blankResults.value[userAnswerIndex] = true
+        } else {
+          blankResults.value[userAnswerIndex] = false
           allMatch = false
-          break
         }
         userAnswerIndex++
       }
