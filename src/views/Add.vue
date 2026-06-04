@@ -24,18 +24,25 @@
               <div class="flex justify-between items-center mb-4">
                 <span style="color: var(--text-main)">上传包含错题的图片</span>
                 <div class="flex gap-2">
-                  <van-uploader v-model="fileList" :max-count="1" accept="image/*" capture="camera" :after-read="afterRead" @delete="onDeleteImage">
+                  <van-uploader accept="image/*" capture="camera" :after-read="onFileSelected" :preview-image="false">
                     <van-button icon="photograph" round size="small" :loading="recognizing" class="custom-btn">拍照</van-button>
                   </van-uploader>
-                  <van-uploader v-model="fileList" :max-count="1" accept="image/*" :after-read="afterRead" @delete="onDeleteImage">
+                  <van-uploader accept="image/*" multiple :after-read="onFileSelected" :preview-image="false">
                     <van-button icon="photo" round size="small" :loading="recognizing" class="custom-btn">选图</van-button>
                   </van-uploader>
                 </div>
               </div>
-              <div class="flex items-center justify-between text-sm mb-2">
-                <span style="color: var(--text-sub)">保存原图 (复习时可查看)</span>
-                <van-switch v-model="saveImage" size="20px" active-color="var(--text-main)" />
+              
+              <!-- 统一的图片预览区 -->
+              <div v-if="fileList.length > 0" class="mb-4">
+                <van-uploader v-model="fileList" multiple :show-upload="false" @delete="onDeleteImage" />
+                <div class="mt-2">
+                  <van-button block round @click="startRecognition" :loading="recognizing" class="custom-btn">
+                    开始识图 ({{ fileList.length }}张)
+                  </van-button>
+                </div>
               </div>
+
               <div class="text-xs" style="color: var(--text-sub)">
                 提示：AI 会自动过滤做对的题，只提取有红笔批改或打叉的错题。
               </div>
@@ -166,7 +173,6 @@ import { showToast, showLoadingToast, closeToast, showDialog } from 'vant'
 const router = useRouter()
 const activeTab = ref(0)
 const fileList = ref([])
-const saveImage = ref(false)
 const recognizing = ref(false)
 const saving = ref(false)
 const importText = ref('')
@@ -290,7 +296,17 @@ const onCategoryConfirm = ({ selectedOptions }) => {
   showCategoryPicker.value = false
 }
 
-const afterRead = async (file) => {
+const onFileSelected = (file) => {
+  if (Array.isArray(file)) {
+    fileList.value.push(...file)
+  } else {
+    fileList.value.push(file)
+  }
+}
+
+const startRecognition = async () => {
+  if (fileList.value.length === 0) return
+
   const settings = JSON.parse(localStorage.getItem('ai_settings') || '{}')
   if (!settings.apiUrl || !settings.apiKey) {
     showToast('请先在设置中配置 API URL 和 API Key')
@@ -305,9 +321,7 @@ const afterRead = async (file) => {
   })
 
   try {
-    const base64Image = file.content
-
-    const prompt = `你是一个智能错题整理助手。用户上传了一张包含多道题目的试卷或作业图片。
+    const prompt = `你是一个智能错题整理助手。用户上传了包含多道题目的试卷或作业图片。
 请仔细观察图片，找出其中**有错误痕迹**（如红笔批改、打叉✗、订正痕迹、低分等）的题目。**忽略做对的题目**。
 对于每一道错题，请提取以下信息，并严格以JSON数组的格式返回：
 [
@@ -315,13 +329,18 @@ const afterRead = async (file) => {
     "type": "题型（如：单选题、多选题、判断题、填空题、简答题、论述题、其他）",
     "content": "题干完整内容。注意：如果是填空题，请将需要填空的地方统一替换为三个下划线 ___",
     "options": "选项完整内容（仅选择题需要，其他题型留空）",
-    "answer": "正确答案。注意：如果是填空题，有多个空时，请严格使用双竖线 || 分隔每个空的答案（例如：答案1||答案2||答案3）。如果其中有几个空的顺序先后并不影响答案正确（如xx里包含A、B、C。此类型题目），请使用 && 连接这几个并列的答案（例如：A&&B&&C||固定答案3）。",
+    "answer": "正确答案。注意：如果是填空题，有多个空时，请严格使用双竖线 || 分隔每个空的答案（例如：答案1||答案2||答案3）。【重要特例】：如果题目中有几个连续的空是并列关系，填入顺序不影响正确性（例如：三大平原是___、___、___），请将这几个答案用 && 连接。注意：这几个并列的空只需要输出一次合并后的答案即可，绝对不要为每个空重复输出！正确示范：东北平原&&华北平原&&长江中下游平原。错误示范：东北平原&&华北平原&&长江中下游平原||东北平原&&华北平原&&长江中下游平原||东北平原&&华北平原&&长江中下游平原",
     "analysis": "根据原题做出的解析（不要根据图片中的错误答案做解析）"
   }
 ]
 注意：
 1. 必须返回JSON数组，即使只有一道错题。
 2. 只返回JSON，不要包含任何其他说明文字或Markdown代码块标记（如\`\`\`json）。`
+
+    const imageContents = fileList.value.map(f => ({
+      type: 'image_url',
+      image_url: { url: f.content }
+    }))
 
     const response = await fetch(`${settings.apiUrl}/chat/completions`, {
       method: 'POST',
@@ -336,7 +355,7 @@ const afterRead = async (file) => {
             role: 'user',
             content: [
               { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: base64Image } }
+              ...imageContents
             ]
           }
         ]
@@ -368,6 +387,8 @@ const afterRead = async (file) => {
       
       questions.value = [...questions.value, ...newQuestions]
       showToast(`成功识别 ${newQuestions.length} 道错题`)
+      // 识别成功后清空图片列表
+      fileList.value = []
     } else {
       showToast('未在图片中发现错题')
     }
@@ -468,9 +489,6 @@ const saveAll = async () => {
     const storedQuestions = await localforage.getItem('questions') || []
     const now = Date.now()
     
-    // 获取图片内容（如果需要保存）
-    const imageContent = saveImage.value && fileList.value.length > 0 ? fileList.value[0].content : null
-
     const newQuestionsToSave = questions.value.map((q, index) => {
       return {
         id: `${now}_${index}`,
@@ -482,7 +500,7 @@ const saveAll = async () => {
         answer: q.answer,
         analysis: q.analysis,
         date: now,
-        image: imageContent, // 批量录入的题目共享同一张原图
+        image: null, // 不再保存原图
         reviewCount: 0,
         errorCount: 0,
         createdAt: now,
