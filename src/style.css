@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root {
+  /* 默认浅色主题 (简约白) */
+  --app-bg: #f7f8fa;
+  --panel-bg: #ffffff;
+  --panel-border: rgba(0, 0, 0, 0.03);
+  --panel-shadow: 0 8px 24px rgba(149, 157, 165, 0.08);
+  --panel-blur: none;
+  
+  --text-main: #2c3e50;
+  --text-sub: #8a97a3;
+  
+  --nav-bg: rgba(255, 255, 255, 0.95);
+  --nav-blur: blur(10px);
+  
+  --btn-bg: #f0f2f5;
+  --btn-text: #2c3e50;
+  --btn-border: transparent;
+  
+  --tag-bg: #f0f2f5;
+  --tag-text: #5c6b7a;
+}
+
+[data-theme="scenery"] {
+  /* 风景毛玻璃主题 */
+  --app-bg: url('https://i.postimg.cc/NfLgV2rc/Camera-XHS-17805753775321040g2sg31os6oomf1q804a0p.jpg') center/cover no-repeat fixed;
+  --panel-bg: rgba(255, 255, 255, 0.25);
+  --panel-border: rgba(255, 255, 255, 0.4);
+  --panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  --panel-blur: blur(16px);
+  
+  --text-main: #1a1a1a;
+  --text-sub: #4a4a4a;
+  
+  --nav-bg: rgba(255, 255, 255, 0.15);
+  --nav-blur: blur(16px);
+  
+  --btn-bg: rgba(255, 255, 255, 0.3);
+  --btn-text: #1a1a1a;
+  --btn-border: rgba(255, 255, 255, 0.5);
+  
+  --tag-bg: rgba(255, 255, 255, 0.3);
+  --tag-text: #1a1a1a;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--app-bg);
+  color: var(--text-main);
+  transition: background 0.3s ease;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 通用卡片类 */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: var(--panel-blur);
+  -webkit-backdrop-filter: var(--panel-blur);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  border-radius: 16px;
+}
+
+/* 自定义按钮和标签 */
+.custom-btn {
+  background: var(--btn-bg) !important;
+  color: var(--btn-text) !important;
+  border: 1px solid var(--btn-border) !important;
+}
+
+.custom-tag {
+  background: var(--tag-bg) !important;
+  color: var(--tag-text) !important;
+  border: none !important;
+}
+
+/* 覆盖 Vant 默认样式 */
+:root {
+  --van-nav-bar-background: var(--nav-bg);
+  --van-nav-bar-title-text-color: var(--text-main);
+  --van-nav-bar-icon-color: var(--text-main);
+  --van-tabbar-background: var(--nav-bg);
+  --van-tabbar-item-text-color: var(--text-sub);
+  --van-tabbar-item-active-color: var(--text-main);
+  --van-cell-background: transparent;
+  --van-cell-text-color: var(--text-main);
+  --van-collapse-item-content-background: transparent;
+}
+
+.van-nav-bar {
+  backdrop-filter: var(--nav-blur);
+  -webkit-backdrop-filter: var(--nav-blur);
+}
+.van-nav-bar::after {
+  border-bottom: none !important;
+}
+
+.van-tabbar {
+  backdrop-filter: var(--nav-blur);
+  -webkit-backdrop-filter: var(--nav-blur);
+  border-top: 1px solid var(--panel-border);
+}
+
+.van-popup {
+  background: var(--app-bg) !important;
+}
+.van-popup::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel-bg);
+  backdrop-filter: var(--panel-blur);
+  z-index: -1;
+}
